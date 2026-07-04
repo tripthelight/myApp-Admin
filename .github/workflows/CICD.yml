@@ -1,0 +1,62 @@
+name: Build and blue-green deploy Admin
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".gitattributes"
+      - ".gitignore"
+      - "README.md"
+  workflow_dispatch:
+
+concurrency:
+  group: myapp-admin-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, X64, myapp-admin]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify deployment environment
+        run: |
+          docker version
+          docker compose version
+          docker network inspect myapp-network >/dev/null
+          docker inspect myapp-nginx >/dev/null
+
+      - name: Build and deploy Admin without downtime
+        id: deploy
+        env:
+          IMAGE_NAME: myapp-admin
+          IMAGE_TAG: ${{ github.sha }}
+          MYAPP_INFRA_DIR: /home/um/myApp-Infra
+          DEPLOY_LOG_DIR: /home/um/myapp-deploy-logs/admin
+          DRAIN_SECONDS: '10'
+          STABILIZATION_SECONDS: '30'
+          CHECK_INTERVAL_SECONDS: '2'
+          KEEP_IMAGE_COUNT: '3'
+          BUILD_CACHE_PRUNE_UNTIL: '24h'
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/deploy-local.sh
+
+      - name: Collect post-deployment evidence
+        if: always()
+        shell: bash
+        run: |
+          docker exec myapp-nginx wget -q -T 2 -O - http://127.0.0.1/admin/
+          docker ps --filter 'name=myapp-admin-' --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
