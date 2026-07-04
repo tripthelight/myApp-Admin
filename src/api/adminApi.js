@@ -69,6 +69,39 @@ export async function getAdminUsers() {
   return handleJsonResponse(response);
 }
 
+export async function lockAdminUser(username) {
+  const response = await authFetch(
+    `${MEMBER_API_BASE_URL}/admin/users/${encodeURIComponent(username)}/lock`,
+    {
+      method: "PATCH",
+    }
+  );
+
+  return handleJsonResponse(response);
+}
+
+export async function unlockAdminUser(username) {
+  const response = await authFetch(
+    `${MEMBER_API_BASE_URL}/admin/users/${encodeURIComponent(username)}/unlock`,
+    {
+      method: "PATCH",
+    }
+  );
+
+  return handleJsonResponse(response);
+}
+
+export async function deleteAdminUser(username) {
+  const response = await authFetch(
+    `${MEMBER_API_BASE_URL}/admin/users/${encodeURIComponent(username)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  return handleJsonResponse(response);
+}
+
 export async function getBoards() {
   const response = await authFetch(`${BOARD_API_BASE_URL}/list`, {
     method: "GET",

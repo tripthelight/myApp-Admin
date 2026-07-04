@@ -34,6 +34,11 @@ button.secondary {
   color: #22304a;
 }
 
+button.danger {
+  background: #ffe8e8;
+  color: #a22020;
+}
+
 input {
   width: 100%;
   border: 1px solid #d5deeb;
@@ -229,6 +234,22 @@ th {
   font-size: 12px;
   font-weight: 800;
   padding: 4px 8px;
+}
+
+.badge.danger {
+  background: #ffe8e8;
+  color: #a22020;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.row-actions button {
+  padding: 6px 9px;
+  white-space: nowrap;
 }
 
 .empty {

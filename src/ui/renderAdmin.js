@@ -1,9 +1,12 @@
 import {
+  deleteAdminUser,
   getAdminSummary,
   getAdminUsers,
   getBoards,
+  lockAdminUser,
   loginAdmin,
   logoutAdmin,
+  unlockAdminUser,
 } from "../api/adminApi.js";
 import { getCurrentTokenPayload } from "../auth/authFetch.js";
 import { getAccessToken } from "../auth/tokenStorage.js";
@@ -152,7 +155,9 @@ function renderUsersTable() {
             <th>Email</th>
             <th>Role</th>
             <th>Provider</th>
+            <th>상태</th>
             <th>가입일</th>
+            <th>관리</th>
           </tr>
         </thead>
         <tbody>
@@ -166,7 +171,32 @@ function renderUsersTable() {
                   <td>${escapeHtml(user.email || "-")}</td>
                   <td><span class="badge">${escapeHtml(user.roleType)}</span></td>
                   <td>${escapeHtml(user.social ? user.socialProviderType || "SOCIAL" : "LOCAL")}</td>
+                  <td>
+                    <span class="badge ${user.lock ? "danger" : ""}">
+                      ${user.lock ? "LOCKED" : "ACTIVE"}
+                    </span>
+                  </td>
                   <td>${escapeHtml(formatDate(user.createdDate))}</td>
+                  <td>
+                    <div class="row-actions">
+                      <button
+                        type="button"
+                        class="secondary"
+                        data-user-action="${user.lock ? "unlock" : "lock"}"
+                        data-username="${escapeHtml(user.username)}"
+                      >
+                        ${user.lock ? "잠금 해제" : "잠금"}
+                      </button>
+                      <button
+                        type="button"
+                        class="danger"
+                        data-user-action="delete"
+                        data-username="${escapeHtml(user.username)}"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               `
             )
@@ -309,6 +339,52 @@ function renderDashboard() {
       renderDashboard();
     });
   });
+
+  document.querySelectorAll("[data-user-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      handleUserAction(button.dataset.userAction, button.dataset.username);
+    });
+  });
+}
+
+async function handleUserAction(action, username) {
+  if (!action || !username) {
+    return;
+  }
+
+  const actionLabel = {
+    lock: "잠금",
+    unlock: "잠금 해제",
+    delete: "삭제",
+  }[action];
+
+  const ok = window.confirm(`${username} 회원을 ${actionLabel}할까요?`);
+
+  if (!ok) {
+    return;
+  }
+
+  try {
+    if (action === "lock") {
+      await lockAdminUser(username);
+    } else if (action === "unlock") {
+      await unlockAdminUser(username);
+    } else if (action === "delete") {
+      const confirmUsername = window.prompt("삭제하려면 username을 한 번 더 입력하세요.");
+
+      if (confirmUsername !== username) {
+        window.alert("username이 일치하지 않아 삭제를 취소합니다.");
+        return;
+      }
+
+      await deleteAdminUser(username);
+    }
+
+    await loadDashboard();
+  } catch (error) {
+    state.error = `${username} 회원 ${actionLabel}에 실패했습니다.`;
+    renderDashboard();
+  }
 }
 
 async function loadDashboard() {
