@@ -109,3 +109,11 @@ export async function getBoards() {
 
   return handleJsonResponse(response);
 }
+
+export async function deleteBoardByAdmin(id) {
+  const response = await authFetch(`${BOARD_API_BASE_URL}/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+
+  return handleJsonResponse(response);
+}

@@ -1,4 +1,5 @@
 import {
+  deleteBoardByAdmin,
   deleteAdminUser,
   getAdminSummary,
   getAdminUsers,
@@ -224,6 +225,7 @@ function renderBoardsTable() {
             <th>작성자</th>
             <th>작성일</th>
             <th>수정일</th>
+            <th>관리</th>
           </tr>
         </thead>
         <tbody>
@@ -236,6 +238,16 @@ function renderBoardsTable() {
                   <td>${escapeHtml(board.writer)}</td>
                   <td>${escapeHtml(formatDate(board.createdAt))}</td>
                   <td>${escapeHtml(formatDate(board.updatedAt))}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="danger"
+                      data-board-action="delete"
+                      data-board-id="${escapeHtml(board.id)}"
+                    >
+                      삭제
+                    </button>
+                  </td>
                 </tr>
               `
             )
@@ -345,6 +357,13 @@ function renderDashboard() {
       handleUserAction(button.dataset.userAction, button.dataset.username);
     });
   });
+
+  document.querySelectorAll("[data-board-action]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handleBoardAction(button.dataset.boardAction, button.dataset.boardId);
+    });
+  });
 }
 
 async function handleUserAction(action, username) {
@@ -383,6 +402,34 @@ async function handleUserAction(action, username) {
     await loadDashboard();
   } catch (error) {
     state.error = `${username} 회원 ${actionLabel}에 실패했습니다.`;
+    renderDashboard();
+  }
+}
+
+async function handleBoardAction(action, id) {
+  if (action !== "delete" || !id) {
+    return;
+  }
+
+  const board = state.boards.find((item) => String(item.id) === String(id));
+  const title = board?.title || `#${id}`;
+
+  const ok = window.confirm(`${title} 게시글을 삭제할까요?`);
+
+  if (!ok) {
+    return;
+  }
+
+  try {
+    await deleteBoardByAdmin(id);
+
+    if (state.selectedBoard && String(state.selectedBoard.id) === String(id)) {
+      state.selectedBoard = null;
+    }
+
+    await loadDashboard();
+  } catch (error) {
+    state.error = `${title} 게시글 삭제에 실패했습니다.`;
     renderDashboard();
   }
 }
