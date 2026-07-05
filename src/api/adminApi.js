@@ -3,6 +3,7 @@ import { clearTokens, getRefreshToken, saveTokens } from "../auth/tokenStorage.j
 
 const MEMBER_API_BASE_URL = "/member";
 const BOARD_API_BASE_URL = "/board";
+const PAYMENTS_API_BASE_URL = "/payments";
 
 async function handleJsonResponse(response) {
   if (!response.ok) {
@@ -113,6 +114,22 @@ export async function getBoards() {
 export async function deleteBoardByAdmin(id) {
   const response = await authFetch(`${BOARD_API_BASE_URL}/${encodeURIComponent(id)}`, {
     method: "DELETE",
+  });
+
+  return handleJsonResponse(response);
+}
+
+export async function getPaymentSummary() {
+  const response = await authFetch(`${PAYMENTS_API_BASE_URL}/admin/summary`, {
+    method: "GET",
+  });
+
+  return handleJsonResponse(response);
+}
+
+export async function getPayments() {
+  const response = await authFetch(`${PAYMENTS_API_BASE_URL}/admin/payments`, {
+    method: "GET",
   });
 
   return handleJsonResponse(response);

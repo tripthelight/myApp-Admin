@@ -4,6 +4,8 @@ import {
   getAdminSummary,
   getAdminUsers,
   getBoards,
+  getPaymentSummary,
+  getPayments,
   lockAdminUser,
   loginAdmin,
   logoutAdmin,
@@ -16,8 +18,10 @@ const app = document.querySelector("#app");
 
 const state = {
   summary: null,
+  paymentSummary: null,
   users: [],
   boards: [],
+  payments: [],
   selectedBoard: null,
   keyword: "",
   loading: false,
@@ -74,6 +78,19 @@ function getFilteredUsers() {
 function getFilteredBoards() {
   return state.boards.filter((board) =>
     includesKeyword(board.title, board.content, board.writer)
+  );
+}
+
+function getFilteredPayments() {
+  return state.payments.filter((payment) =>
+    includesKeyword(
+      payment.username,
+      payment.planCode,
+      payment.planName,
+      payment.status,
+      payment.checkoutSessionId,
+      payment.paymentIntentId
+    )
   );
 }
 
@@ -258,6 +275,51 @@ function renderBoardsTable() {
   `;
 }
 
+function renderPaymentsTable() {
+  const payments = getFilteredPayments();
+
+  if (payments.length === 0) {
+    return `<div class="empty">조건에 맞는 결제 내역이 없습니다.</div>`;
+  }
+
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Plan</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Session</th>
+            <th>Created</th>
+            <th>Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${payments
+            .map(
+              (payment) => `
+                <tr>
+                  <td>${escapeHtml(payment.id)}</td>
+                  <td>${escapeHtml(payment.username)}</td>
+                  <td>${escapeHtml(payment.planName)} (${escapeHtml(payment.planCode)})</td>
+                  <td>${escapeHtml(Number(payment.amount).toLocaleString("ko-KR"))} ${escapeHtml(String(payment.currency).toUpperCase())}</td>
+                  <td><span class="badge">${escapeHtml(payment.status)}</span></td>
+                  <td>${escapeHtml(payment.checkoutSessionId)}</td>
+                  <td>${escapeHtml(formatDate(payment.createdAt))}</td>
+                  <td>${escapeHtml(formatDate(payment.paidAt))}</td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderBoardDetail() {
   if (!state.selectedBoard) {
     return `<div class="empty">게시글을 선택하면 내용이 표시됩니다.</div>`;
@@ -299,6 +361,8 @@ function renderDashboard() {
         ${renderMetric("일반 회원", state.summary?.localUsers ?? "-")}
         ${renderMetric("소셜 회원", state.summary?.socialUsers ?? "-")}
         ${renderMetric("전체 게시글", state.boards.length)}
+        ${renderMetric("결제 완료", state.paymentSummary?.paidPayments ?? "-")}
+        ${renderMetric("결제 금액", state.paymentSummary ? Number(state.paymentSummary.paidAmount).toLocaleString("ko-KR") : "-")}
       </section>
 
       <section class="toolbar">
@@ -327,6 +391,14 @@ function renderDashboard() {
             <h2>게시글 상세</h2>
           </div>
           ${renderBoardDetail()}
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>결제 내역</h2>
+            <span>${getFilteredPayments().length}건</span>
+          </div>
+          ${renderPaymentsTable()}
         </article>
       </section>
     </main>
@@ -439,15 +511,19 @@ async function loadDashboard() {
   state.error = "";
 
   try {
-    const [summary, users, boards] = await Promise.all([
+    const [summary, users, boards, paymentSummary, payments] = await Promise.all([
       getAdminSummary(),
       getAdminUsers(),
       getBoards(),
+      getPaymentSummary(),
+      getPayments(),
     ]);
 
     state.summary = summary;
+    state.paymentSummary = paymentSummary;
     state.users = users;
     state.boards = boards;
+    state.payments = payments;
     state.selectedBoard = boards[0] || null;
     renderDashboard();
   } catch (error) {
